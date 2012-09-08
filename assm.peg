@@ -1,0 +1,332 @@
+
+start
+  = ws i:lins*
+    {
+      var dump = [];
+      var labels = {};
+      for (var j = 0; j < i.length; ++j) {
+        var ins = i[j];
+
+        if (ins.label) {
+          labels[ins.label] = dump.length;
+        }
+
+        if (ins.type === 'data') {
+          dump = dump.concat(ins.val);
+          continue;
+        }
+
+        var a_val = null;
+        var a_next = false;
+        var b_val = null;
+        var b_next = false;
+        if (ins.a.type === 'label') {
+          a_val = labels[ins.a.val] || ins.a.val;
+          ins.a.code = 0x1f;
+          a_next = true;
+          if (typeof a_val === 'number' && a_val <= 30) {
+            ins.a.code = a_val + 0x21;
+            a_next = false;
+          }
+        } else if (ins.a.type === 'labelref') {
+          a_val = labels[ins.a.val] || ins.a.val;
+          ins.a.code = 0x1e;
+          a_next = true;
+        } else if (ins.b.type === 'labelref') {
+          b_val = labels[ins.b.val] || ins.b.val;
+          ins.b.code = 0x1e;
+          b_next = true;
+        }
+
+        ins.code = ins.op.code + (ins.a.code << 10) + (ins.b.code << 5);
+        dump.push(ins.code);
+
+        if (a_next) {
+          dump.push(a_val);
+        }
+        if (b_next) {
+          dump.push(b_val);
+        }
+
+        if (   ins.a.type === 'numref'
+            || ins.a.type === 'num') {
+          dump.push(ins.a.val);
+        }
+        if (   ins.a.type === 'regoff'
+            || ins.a.type === 'regoffr') {
+          dump.push(ins.a.off);
+        }
+
+        if (   ins.b.type === 'numref'
+            || ins.b.type === 'num') {
+          dump.push(ins.b.val);
+        }
+        if (   ins.b.type === 'regoff'
+            || ins.b.type === 'regoffr') {
+          dump.push(ins.b.off);
+        }
+      }
+
+      for (var j = 0; j < dump.length; ++j) {
+        if (typeof dump[j] === 'string') {
+          dump[j] = labels[dump[j]];
+        }
+      }
+
+      return {dump: dump,
+              labels: labels,
+              ins: i};
+    }
+
+lins
+  = l:(':' label)? i:ins
+    { if (l[1]) {
+        i.label = l[1].val;
+      }
+      return i;
+    }
+
+ins
+  = l:(':' label)? ws o:op ws b:bvalue ws ','? ws a:avalue ws
+    { return {op: o, b: b, a: a, label: l[1]}; }
+  / l:(':' label)? ws o:sop ws a:avalue ws
+    { return {op: {type: 'special', code: 0},
+              a: a,
+              b: o,
+              label: l[1]}; }
+  / l:(':' label)? ws d:dat ws
+    { return {type: 'data', val: d, label: 1}; }
+
+dat
+  = [Dd][Aa][Tt] ws d:((num / string) ws ','? ws)+
+    {
+      var data = [];
+      for (var i = 0; i < d.length; ++i) {
+        var dat = d[i][0];
+        switch (dat.type) {
+          case 'num':
+            data.push(dat.val); break;
+          case 'string':
+            for (var j = 0; j < dat.val.length; ++j) {
+              var char = dat.val[j];
+              data.push(dat.val.charCodeAt(j));
+            }
+            //data.push(dat.val); break;
+        }
+      }
+      return data;
+    }
+
+op
+  = set / add / sub / mul / mli / div / dvi / mod / mdi / and / bor / xor / shr / asr / shl / ifb / ifc / ife / ifn / ifg / ifa / ifl / ifu / adx / sbx / sti / std
+
+set = [Ss][Ee][Tt] { return {type: 'set', code: 0x01}; }
+add = [Aa][Dd][Dd] { return {type: 'add', code: 0x02}; }
+sub = [Ss][Uu][Bb] { return {type: 'sub', code: 0x03}; }
+
+mul = [Mm][Uu][Ll] { return {type: 'mul', code: 0x04}; }
+mli = [Mm][Ll][Ii] { return {type: 'mli', code: 0x05}; }
+div = [Dd][Ii][Vv] { return {type: 'div', code: 0x06}; }
+dvi = [Dd][Vv][Ii] { return {type: 'dvi', code: 0x07}; }
+mod = [Mm][Oo][Dd] { return {type: 'mod', code: 0x08}; }
+mdi = [Mm][Dd][Ii] { return {type: 'mdi', code: 0x09}; }
+and = [Aa][Nn][Dd] { return {type: 'and', code: 0x0a}; }
+bor = [Bb][Oo][Rr] { return {type: 'bor', code: 0x0b}; }
+xor = [Xx][Oo][Rr] { return {type: 'xor', code: 0x0c}; }
+shr = [Ss][Hh][Rr] { return {type: 'shr', code: 0x0d}; }
+asr = [Aa][Ss][Rr] { return {type: 'asr', code: 0x0e}; }
+shl = [Ss][Hh][Ll] { return {type: 'shl', code: 0x0f}; }
+
+ifb = [Ii][Ff][Bb] { return {type: 'ifb', code: 0x10}; }
+ifc = [Ii][Ff][Cc] { return {type: 'ifc', code: 0x11}; }
+ife = [Ii][Ff][Ee] { return {type: 'ife', code: 0x12}; }
+ifn = [Ii][Ff][Nn] { return {type: 'ifn', code: 0x13}; }
+ifg = [Ii][Ff][Gg] { return {type: 'ifg', code: 0x14}; }
+ifa = [Ii][Ff][Aa] { return {type: 'ifa', code: 0x15}; }
+ifl = [Ii][Ff][Ll] { return {type: 'ifl', code: 0x16}; }
+ifu = [Ii][Ff][Uu] { return {type: 'ifu', code: 0x17}; }
+
+adx = [Aa][Dd][Xx] { return {type: 'adx', code: 0x1a}; }
+sbx = [Ss][Bb][Xx] { return {type: 'sbx', code: 0x1b}; }
+
+sti = [Ss][Tt][Ii] { return {type: 'sti', code: 0x1e}; }
+std = [Ss][Tt][Dd] { return {type: 'std', code: 0x1f}; }
+
+sop
+ = jsr / hcf / int / iag / ias / rfi / iaq /hwn / hwq / hwi
+
+jsr = [Jj][Ss][Rr] { return {type: 'jsr', code: 0x01}; }
+hcf = [Hh][Cc][Ff] { return {type: 'hcf', code: 0x07}; }
+int = [Ii][Nn][Tt] { return {type: 'int', code: 0x08}; }
+iag = [Ii][Aa][Gg] { return {type: 'iag', code: 0x09}; }
+ias = [Ii][Aa][Ss] { return {type: 'ias', code: 0x0a}; }
+rfi = [Rr][Ff][Ii] { return {type: 'rfi', code: 0x0b}; }
+iaq = [Ii][Aa][Qq] { return {type: 'iaq', code: 0x0c}; }
+
+hwn = [Hh][Ww][Nn] { return {type: 'hwn', code: 0x10}; }
+hwq = [Hh][Ww][Qq] { return {type: 'hwq', code: 0x11}; }
+hwi = [Hh][Ww][Ii] { return {type: 'hwi', code: 0x12}; }
+
+
+value
+  = reg / regref / regoff / regoffr / peek / pick / numref / num / label / labelref
+
+avalue
+  = v:(pop / value)
+    {
+      if (v.type === 'num') {
+        if (v.val <= 30 && v.val >= -1) {
+          v.type = 'opnum';
+          v.code = v.val + 0x21;
+        } else {
+          v.code = 0x1f;
+        }
+      } else if (v.type === 'numref') {
+        v.code = 0x1e;
+      }
+      return v;
+    }
+
+bvalue
+  = v:(push / value)
+    {
+      if (v.type === 'num') {
+        v.code = 0x1f;
+      } else if (v.type === 'numref') {
+        v.code = 0x1e;
+      }
+      return v;
+    }
+
+pop
+  = [Pp][Oo][Pp]
+    { return {type: 'pop', code: 0x18}; }
+
+push
+  = [Pp][Uu][Ss][Hh]
+    { return {type: 'push', code: 0x18}; }
+
+peek
+  = [Pp][Ee][Ee][Kk]
+    { return {type: 'peek', code: 0x19}; }
+
+pick
+  = [Pp][Ii][Cc][Kk] ws n:num
+    { return {type: 'pick', code: 0x1a, val: n}; }
+
+label
+  = l:LabelChar+
+    { return {type: 'label', val: l.join('')}; }
+
+labelref
+  = '[' l:LabelChar+ ']'
+    { return {type: 'labelref', val: l.join('')}; }
+
+regoff
+  = '[' n:num ws '+' ws r:reg ']'
+    { return {type: 'regoff', val: r.val, code: r.code + 0x10, off: n.val}; }
+
+regoffr
+  = '[' r:reg ws '+' ws n:num']'
+    { return {type: 'regoff', val: r.val, code: r.code + 0x10, off: n.val}; }
+
+regref
+  = '[' r:reg ']'
+    { return {type: 'regref', val: r.val, code: r.code+0x8}; }
+
+reg
+  = r:([ABCXYZIJabcxyzij]
+  / [Pp][Cc] / [Ss][Pp] / [Ee][Xx] )
+    (&(!LabelChar))
+    {
+      var reg = r.length > 1 ? r.join('').toLowerCase() : r.toLowerCase();
+      var code = 0;
+      switch (reg) {
+        case 'a': code = 0x0; break;
+        case 'b': code = 0x1; break;
+        case 'c': code = 0x2; break;
+        case 'x': code = 0x3; break;
+        case 'y': code = 0x4; break;
+        case 'z': code = 0x5; break;
+        case 'i': code = 0x6; break;
+        case 'j': code = 0x7; break;
+        case 'sp': code = 0x1b; break;
+        case 'pc': code = 0x1c; break;
+        case 'ex': code = 0x1d; break;
+      }
+      return {type: 'reg',
+              val: reg,
+              code: code};
+    }
+
+numref
+  = '[' n:num ']'
+    { return {type: 'numref', val: n.val}; }
+
+num
+  = n:(hexnum / decnum)
+    { return {type: 'num', val: n}; }
+
+decnum
+  = d:[0-9]+
+    { return parseInt(d.join(''), 10); }
+
+hexnum
+  = "0x" d:[0-9a-fA-F]+
+    { return parseInt(d.join(''), 16); }
+
+SourceChar
+  = [\u0000-\uffff]
+LineChar
+  = (!(EOLChar) SourceChar)
+EOLChar
+  = [\u000a\u000b\u000c\u000d\u0085\u2028\u2029]
+SpaceChar
+  = [\u0009\u0020\u00a0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006]
+LabelChar
+  = [a-zA-Z0-9_]
+CommentChar
+  = ';'
+Comment
+  = CommentChar LineChar*
+
+ws
+  = (SpaceChar / EOLChar / Comment)*
+  { return ''; }
+
+eol
+  = (SpaceChar / Comment)* EOLChar+
+
+string
+    = "'" chars:s_char* "'"
+      { return {type: 'string', val: chars.join('')}; }
+    / '"' chars:d_char* '"'
+      { return {type: 'string', val: chars.join('')}; }
+s_char
+    = !( "'" / '\\' / EOLChar ) char:SourceChar
+        { return char; }
+    / '\\' char:escape
+        { return JSON.parse('"\\' + char + '"'); }
+d_char
+    = !( '"' / '\\' / EOLChar ) char:SourceChar
+        { return char; }
+    / '\\' char:escape
+        { return JSON.parse('"\\' + char + '"'); }
+escape
+    = single_escape_char
+    / non_escape_char
+    / "0" !([0-9])
+    / hex_escape
+    / unicode_escape
+single_escape_char
+    = [\u0027\u0022\u005Cbfnrtv]
+non_escape_char
+    = !(single_escape_char / [0-9ux] / EOLChar) SourceChar
+hex_escape
+    = "x" d1:hex d2:hex
+        { return 'x' + d1 + d2; }
+unicode_escape
+    = "u" d1:hex d2:hex d3:hex d4:hex
+        { return 'u' + d1 + d2 + d3 + d4; }
+hex
+    = [0-9a-fA-F]

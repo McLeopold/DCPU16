@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DCPU16</title>
+  </head>
+  <body>
+    <table border="1">
+      <tr>
+        <td rowspan="7" style="vertical-align: top;">
+          <input id="parse" type="button" value="PARSE" />
+          <input id="run" type="button" value="RUN" />
+          <input id="step" type="button" value="STEP" />
+          <br />
+          <textarea id="prog" cols="48" rows="32">; detect Lunar Module v1
+        HWN I
+:hw_loop
+        SUB I, 1
+        HWQ I
+        IFE B, 0x4c4d
+          IFE A, 0x3031
+            SET [lunar], I
+        IFE B, 0x7349
+          IFE A, 0xf615
+            SET [display], I
+        IFN I, 0
+          SET PC, hw_loop
+
+:init_lem
+        SET A, 0
+        SET B, 0x8000
+        HWI [display]
+
+:start_decent
+        SET A, 0x10
+        HWI [lunar]
+
+:wait_for_landing
+        SET A, 0x08
+        HWI [lunar]
+
+:display_altitude
+        SET X, C
+        MOD X, 10
+        SET [0x8003], X
+        BOR [0x8003], 0xf030
+
+        SET X, C
+        DIV X, 10
+        MOD X, 10
+        SET [0x8002], X
+        BOR [0x8002], 0xf030
+
+        SET X, C
+        DIV X, 100
+        MOD X, 10
+        SET [0x8001], X
+        BOR [0x8001], 0xf030
+
+        SET X, C
+        DIV X, 1000
+        MOD X, 10
+        SET [0x8000], X
+        BOR [0x8000], 0xf030
+
+        SET PC, wait_for_landing
+
+:lunar
+        DAT 0x0000
+:display
+        DAT 0x0000
+</textarea>
+        </td>
+      </tr>
+      <tr>
+        <th colspan="8">LEM1802</th>
+      </tr>
+      <tr>
+        <td colspan="8">
+          <canvas id="console" width="128" height="96"></canvas><br />
+          <!--<canvas id="fontCanvas" width="420" height="324"></canvas>-->
+        </td>
+      </tr>
+      <tr>
+        <th colspan="8">LM01</th>
+      </tr>
+      <tr>
+        <td colspan="8" style="vertical-align: top;">
+          <input id="LM_start" type="button" value="Start" />
+          <input id="LM_reset" type="button" value="Reset" />
+          <br />
+          <pre id="LM_status"></pre>
+        </td>
+      </tr>
+      <tr>
+        <th colspan="8">DCPU</th>
+      </tr>
+      <tr>
+        <td colspan="8" style="vertical-align: top;"><pre id="RAM"></pre></td>
+      </tr>
+    </table>
+    <script src="jquery-1.7.2.min.js"></script>
+    <script src="assm_parser.js"></script>
+    <script src="lem1802.js"></script>
+    <script src="clock.js"></script>
+    <script src="keyboard.js"></script>
+    <script src="lm01.js"></script>
+    <script src="vm.js"></script>
+  </body>
+</html>

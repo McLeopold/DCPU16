@@ -1,0 +1,7 @@
+{
+  "name"        : "dcpu16",
+  "version"     : "1.0.0",
+  "dependencies": {
+                   "pegjs" : "latest"
+  }
+}
