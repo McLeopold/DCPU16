@@ -24,11 +24,22 @@
   };
 
   var updates_per_second = 10;
+  var G = 6.67e-11
+    , moon_mass = 7.3477e22
+    , moon_radius = 1.738e6
+  ;
   LM01.prototype.start = function () {
     var that = this;
     this.status = 'decent';
     this.interval = setInterval(function () {
-      that.vertical_speed -= that.moon_gravity / updates_per_second;
+      var acceleration = -G * (moon_mass + that.weight()) / (Math.pow(moon_radius + that.altitude, 2));
+      var spent_fuel = that.DPS_burn_rate * that.DPS_burn / 100.0 / updates_per_second;
+      var weight = that.weight();
+      var delta_v = that.DPS_specific_impulse * Math.log(weight / (weight - spent_fuel));
+      that.vertical_speed += acceleration / updates_per_second;
+      that.vertical_speed += delta_v;
+      that.DPS_fuel -= spent_fuel;
+
       that.altitude += that.vertical_speed / updates_per_second;
       if (that.altitude < 0) {
         if (that.vertical_speed > -3.0) {
@@ -42,15 +53,19 @@
     }, Math.floor(1000 / updates_per_second));
   }
 
+  LM01.prototype.weight = function () {
+    return this.DPS_fuel + this.DS_weight + this.APS_fuel + this.AS_weight + this.RCS_fuel;
+  }
+
   LM01.prototype.show_status = function () {
     var msg = '        status: ' + this.status + '\n';
     msg += '      altitude: ' + this.altitude.toFixed(2) + ' m\n';
     msg += 'vertical speed: ' + this.vertical_speed.toFixed(2) + ' m/s\n';
     msg += '         pitch: ' + this.pitch + '?\n';
     msg += '          roll: ' + this.roll + '?\n\n';
-    msg += '      DPS fuel: ' + this.DPS_fuel + 'kg\n';
+    msg += '      DPS fuel: ' + this.DPS_fuel.toFixed(0) + 'kg\n';
     msg += '      DPS burn: ' + this.DPS_burn + '%\n\n';
-    msg += '      RCS fuel: ' + this.RCS_fuel + 'kg\n';
+    msg += '      RCS fuel: ' + this.RCS_fuel.toFixed(0) + 'kg\n';
     msg += 'RCS pitch burn: ' + this.RCS_pitch_burn + '\n';
     msg += ' PCS roll burn: ' + this.RCS_roll_burn + '\n';
 
@@ -59,21 +74,24 @@
 
   LM01.prototype.reset = function () {
     this.DPS_fuel = 8200.0; // kg
-    this.DPS_force = 45040.0; // N
-    this.DPS_max_burn_rate = 15.0; // kg/s
+    this.DPS_specific_impulse = 3050.0; // N*s/kg or m/s
+    this.DPS_thrust = 45040.0; // N
+    this.DPS_burn_rate = this.DPS_thrust / this.DPS_specific_impulse; // kg/s
 
     this.RCS_fuel = 287.0; // kg
-    this.RCS_force = 440.0; // N
-    this.RCS_max_burn_rate = 1.0; // kg/s
+    this.RCS_specific_impulse = 2840.0; // N*s/kg
+    this.RCS_thrust = 440.0; // N
+    this.RCS_max_burn_rate = this.RCS_thrust / this.RCS_specific_impulse; // kg/s
 
-    this.APS_fuel = 2353.0;
-    this.APS_force = 16000.0;
-    this.APS_max_burn_rate = 5.0; // kg/s
+    this.APS_fuel = 2353.0; // kg
+    this.APS_specific_impulse = 3050.0; // N
+    this.APS_thrust = 16000.0; // N*s/kg
+    this.APS_max_burn_rate = this.APS_thrust / this.APS_specific_impulse; // kg/s
 
-    this.DM_weight = 2134.0; // kg
-    this.AM_weight = 2347.0; // kg
+    this.DS_weight = 2134.0; // kg
+    this.AS_weight = 2347.0; // kg
 
-    this.altitude = 2400.0; // m
+    this.altitude = 110000.0; // m
     this.vertical_speed = 0.0; // m/s
     this.start_time = new Date().getTime();
 

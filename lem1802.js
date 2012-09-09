@@ -92,6 +92,8 @@
     this.manufacturer = 0x1c6c8b36;
     this.palette32 = Array(16);
     this.el = el;
+    this.el.width = 128;
+    this.el.height = 96;
     this.width = width === undefined ? 16 : width;
     this.scale = scale || 3;
     this.canvas = el.getContext('2d');
@@ -137,8 +139,8 @@
 
   LEM1802.prototype.set_scale = function (factor) {
     this.el.style.height = Math.floor(this.el.height * factor) + 'px';
+    this.el.style.width = Math.floor(this.el.width * factor) + 'px';
     this.el.style.borderWidth = Math.floor(this.width * factor) + 'px';
-    //this.el.style.borderColor = '#8080ff';
     this.el.style.borderRadius = Math.floor(this.width * factor) + 'px';
   }
 

@@ -27,7 +27,7 @@
       17: 0x91  // control
     };
     $(el).keydown(function (evt) {
-      if (evt.which >= 37 && evt.which <= 40 || evt.which === 8) evt.preventDefault();
+      //if (!(evt.which >= 37 && evt.which <= 40 || evt.which === 8)) evt.preventDefault();
       var key = key_num[evt.which] || evt.which;
       that.pressed[key] = true;
       if (key >= 0x10 && key <= 0x13) that.buffer.push(key);

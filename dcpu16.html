@@ -35,6 +35,11 @@
         SET A, 0x10
         HWI [lunar]
 
+:set_burn
+        SET A, 0x13
+        SET B, 50
+        HWI [lunar]
+
 :wait_for_landing
         SET A, 0x08
         HWI [lunar]
