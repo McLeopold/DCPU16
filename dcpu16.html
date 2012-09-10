@@ -23,6 +23,9 @@
         IFE B, 0x7349
           IFE A, 0xf615
             SET [display], I
+        IFE B, 0xb402
+          IFE A, 0x12d0
+            SET [clock], I
         IFN I, 0
           SET PC, hw_loop
 
@@ -35,10 +38,10 @@
         SET A, 0x10
         HWI [lunar]
 
-:set_burn
-        SET A, 0x13
-        SET B, 50
-        HWI [lunar]
+:set_burn_timer
+        SET A, 0
+        SET B, 4110
+        HWI [clock]
 
 :wait_for_landing
         SET A, 0x08
@@ -47,33 +50,58 @@
 :display_altitude
         SET X, C
         MOD X, 10
+        BOR X, 0xf030
         SET [0x8003], X
-        BOR [0x8003], 0xf030
 
         SET X, C
         DIV X, 10
         MOD X, 10
+        BOR X, 0xf030
         SET [0x8002], X
-        BOR [0x8002], 0xf030
 
         SET X, C
         DIV X, 100
         MOD X, 10
+        BOR X, 0xf030
         SET [0x8001], X
-        BOR [0x8001], 0xf030
 
         SET X, C
         DIV X, 1000
         MOD X, 10
+        BOR X, 0xf030
         SET [0x8000], X
-        BOR [0x8000], 0xf030
+
+        IFL C, 15
+            SET PC, set_hover
+
+        SET A, 1
+        HWI [clock]
+        IFN C, 0
+            SET PC, set_burn
 
         SET PC, wait_for_landing
 
+:set_burn
+        SET A, 0x13
+        SET B, 0x3f
+        HWI [lunar]
+        SET A, 0
+        SET B, 0
+        HWI [clock] ; turn off timer
+        SET PC, wait_for_landing
+
+:set_hover
+        SET A, 0x13
+        SET B, 50
+        HWI [lunar]
+        SET PC, wait_for_landing
+
 :lunar
-        DAT 0x0000
+        DAT 0
 :display
-        DAT 0x0000
+        DAT 0
+:clock
+        DAT 0
 </textarea>
         </td>
       </tr>
@@ -91,9 +119,6 @@
       </tr>
       <tr>
         <td colspan="8" style="vertical-align: top;">
-          <input id="LM_start" type="button" value="Start" />
-          <input id="LM_reset" type="button" value="Reset" />
-          <br />
           <pre id="LM_status"></pre>
         </td>
       </tr>

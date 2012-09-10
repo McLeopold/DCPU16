@@ -27,21 +27,27 @@
       17: 0x91  // control
     };
     $(el).keydown(function (evt) {
-      //if (!(evt.which >= 37 && evt.which <= 40 || evt.which === 8)) evt.preventDefault();
-      var key = key_num[evt.which] || evt.which;
-      that.pressed[key] = true;
-      if (key >= 0x10 && key <= 0x13) that.buffer.push(key);
-      if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      if (evt.target.nodeName !== 'TEXTAREA') {
+        if (evt.which >= 37 && evt.which <= 40 || evt.which === 8) evt.preventDefault();
+        var key = key_num[evt.which] || evt.which;
+        that.pressed[key] = true;
+        if (key >= 0x10 && key <= 0x13) that.buffer.push(key);
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      }
     });
     $(el).keyup(function (evt) {
-      evt.preventDefault();
-      that.pressed[key_num[evt.which] || evt.which] = false;
-      if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      if (evt.target.nodeName !== 'TEXTAREA') {
+        evt.preventDefault();
+        that.pressed[key_num[evt.which] || evt.which] = false;
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      }
     });
     $(el).keypress(function (evt) {
-      //evt.preventDefault();
-      that.buffer.push(key_num[evt.which] || evt.which);
-      if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      if (evt.target.nodeName !== 'TEXTAREA') {
+        evt.preventDefault();
+        that.buffer.push(key_num[evt.which] || evt.which);
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+      }
     });
   };
 

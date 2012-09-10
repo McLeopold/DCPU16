@@ -100,11 +100,14 @@
     this.el.style.borderStyle = 'solid';
     this.set_scale(this.scale);
     this.reset();
+    this.blink_rate = 1000;
+    this.blink = true;
+    this.blink_timer = null;
     this.start_refresh(Hz || 60);
   };
 
   LEM1802.prototype.reset = function () {
-    this.border = 9;
+    this.border = 0;
     this.palette = default_palette.slice(0);
     this.el.style.borderColor = this.css_color(this.border);
     this.canvas.fillStyle = this.css_color(this.border);
@@ -124,10 +127,17 @@
       }
     }
     setTimeout(that.refresh_fn, that.refresh_rate);
+    that.blink_timer = setInterval(function () {
+      that.blink = !that.blink;
+    }, that.blink_rate);
   }
 
   LEM1802.prototype.stop_refresh = function () {
     this.refresh_rate = null;
+    if (this.blink_timer) {
+      clearInterval(this.blink_timer);
+      this.blink_timer = null;
+    }
   }
 
   LEM1802.prototype.css_color = function (c) {
@@ -216,30 +226,31 @@
       var palette32 = this.palette32;
       var font = this.font;
       var idx = 0;
+      var blink_off = !this.blink;
       for (var chridx = 0; chridx < 386; ++chridx) {
-      //for (var row = 0; row < 12; ++row) {
-        //for (var col = 0; col < 32; ++col) {
-          var chrdata = this.screen[chridx]
-            , fore = palette32[chrdata >> 12]
-            , back = palette32[chrdata >> 8 & 0xf]
-            , blink = !!(chrdata & 0x80)
-            , chr = chrdata & 0x7f
-            , font0 = font[chr * 2]
-            , font1 = font[chr * 2 + 1]
-            //, idx = (row << 10) + (col << 2)
-            , bit0 = 0x0100
-            , bit1 = 0x0001
-          ;
-          for (var i = 0; i < 8; ++i) {
-            data[idx++] = (font0 & bit0) ? fore : back;
-            data[idx++] = (font0 & bit1) ? fore : back;
-            data[idx++] = (font1 & bit0) ? fore : back;
-            data[idx++] = (font1 & bit1) ? fore : back;
-            idx += 124;
-            bit0 <<= 1;
-            bit1 <<= 1;
-          }
-        //}
+        var chrdata = this.screen[chridx]
+          , fore = palette32[chrdata >> 12]
+          , back = palette32[chrdata >> 8 & 0xf]
+          , blink = !!(chrdata & 0x80)
+          , chr = chrdata & 0x7f
+        ;
+        if (blink && blink_off) {
+          chr = 0xff;
+        }
+        var font0 = font[chr * 2]
+          , font1 = font[chr * 2 + 1]
+          , bit0 = 0x0100
+          , bit1 = 0x0001
+        ;
+        for (var i = 0; i < 8; ++i) {
+          data[idx++] = (font0 & bit0) ? fore : back;
+          data[idx++] = (font0 & bit1) ? fore : back;
+          data[idx++] = (font1 & bit0) ? fore : back;
+          data[idx++] = (font1 & bit1) ? fore : back;
+          idx += 124;
+          bit0 <<= 1;
+          bit1 <<= 1;
+        }
         if ((chridx & 0x1f) !== 0x1f) {
           idx -= 128 * 8 - 4;
         } else {

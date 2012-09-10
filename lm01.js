@@ -5,62 +5,31 @@
     , SP = 8, PC = 9, EX = 10, IA = 11
   ;
 
+  var DOCKED = 0
+    , DECENT = 1
+    , LANDED = 2
+    , CRASHED = 3
+    , STATUS = ['Docked', 'Decent', 'Landed', 'Crashed']
+    , EASY = 0
+    , NORMAL = 1
+    , HARD = 2
+  ;
+
   // no var so that LM01 is global
-  LM01 = function (pre_status, btn_start, btn_reset) {
+  LM01 = function (pre_status) {
     this.id = 0x4c4d3031;
     this.version = 0x1;
     this.manufacturer = 0x4e414e41;
     this.pre_status = pre_status;
-    this.btn_start = btn_start;
-    this.btn_reset = btn_reset;
-    var that = this;
-    this.btn_start.click(function () {
-      that.start();
-    });
-    this.btn_reset.click(function () {
-      that.reset();
-    })
+    this.status = DOCKED;
     this.reset();
   };
 
-  var updates_per_second = 10;
-  var G = 6.67e-11
-    , moon_mass = 7.3477e22
-    , moon_radius = 1.738e6
-  ;
-  LM01.prototype.start = function () {
-    var that = this;
-    this.status = 'decent';
-    this.interval = setInterval(function () {
-      var acceleration = -G * (moon_mass + that.weight()) / (Math.pow(moon_radius + that.altitude, 2));
-      var spent_fuel = that.DPS_burn_rate * that.DPS_burn / 100.0 / updates_per_second;
-      var weight = that.weight();
-      var delta_v = that.DPS_specific_impulse * Math.log(weight / (weight - spent_fuel));
-      that.vertical_speed += acceleration / updates_per_second;
-      that.vertical_speed += delta_v;
-      that.DPS_fuel -= spent_fuel;
-
-      that.altitude += that.vertical_speed / updates_per_second;
-      if (that.altitude < 0) {
-        if (that.vertical_speed > -3.0) {
-          that.status = 'landed';
-        } else {
-          that.status = 'crashed';
-        }
-        clearInterval(that.interval);
-      }
-      that.show_status();
-    }, Math.floor(1000 / updates_per_second));
-  }
-
-  LM01.prototype.weight = function () {
-    return this.DPS_fuel + this.DS_weight + this.APS_fuel + this.AS_weight + this.RCS_fuel;
-  }
-
   LM01.prototype.show_status = function () {
-    var msg = '        status: ' + this.status + '\n';
+    var msg = '        status: ' + STATUS[this.status] + '\n';
+    msg += '  milliseconds:' + (this.start_time ? (new Date().getTime() - this.start_time) : 0) + '\n\n';
     msg += '      altitude: ' + this.altitude.toFixed(2) + ' m\n';
-    msg += 'vertical speed: ' + this.vertical_speed.toFixed(2) + ' m/s\n';
+    msg += '         speed: ' + this.speed.toFixed(2) + ' m/s\n';
     msg += '         pitch: ' + this.pitch + '?\n';
     msg += '          roll: ' + this.roll + '?\n\n';
     msg += '      DPS fuel: ' + this.DPS_fuel.toFixed(0) + 'kg\n';
@@ -70,6 +39,76 @@
     msg += ' PCS roll burn: ' + this.RCS_roll_burn + '\n';
 
     this.pre_status.text(msg);
+  }
+
+  var time_delta = 0.1;
+  var G = 6.674e-11
+    , moon_mass = 7.3477e22
+    , moon_radius = 1.738e6
+  ;
+  LM01.prototype.start = function () {
+    var that = this;
+    this.status = DECENT;
+    this.start_time = new Date().getTime();
+    var lm_pos = this.lm_pos
+      , lm_vel = this.lm_vel
+      , lm_nor = this.lm_nor
+    ;
+    this.interval = setInterval(function () {
+
+      var g_len = Math.sqrt(lm_pos[0] * lm_pos[0] + lm_pos[1] * lm_pos[1] + lm_pos[2] * lm_pos[2]);
+      var g_nor = [-lm_pos[0] / g_len, -lm_pos[1] / g_len, -lm_pos[2] / g_len];
+      var g = G * moon_mass / Math.pow(g_len, 2) * time_delta;
+      var f_vec = [g_nor[0] * g, g_nor[1] * g, g_nor[2] * g];
+
+      if (that.DPS_burn > 0 && that.DPS_fuel > 0) {
+        var spent_fuel = that.DPS_burn_rate * time_delta * that.DPS_burn / 100.0;
+        if (spent_fuel > that.DPS_fuel) {
+          spent_fuel = that.DPS_fuel;
+        }
+        var weight = that.weight();
+        var delta_v = that.DPS_specific_impulse * Math.log(weight / (weight - spent_fuel));
+        var delta_v_vec = [lm_nor[0] * delta_v, lm_nor[1] * delta_v, lm_nor[2] * delta_v];
+        that.DPS_fuel -= spent_fuel;
+      } else {
+        var delta_v_vec = [0,0,0];
+      }
+
+      f_vec[0] += delta_v_vec[0];
+      f_vec[1] += delta_v_vec[1];
+      f_vec[2] += delta_v_vec[2];
+
+      lm_pos[0] += (lm_vel[0] + 0.5 * f_vec[0]) * time_delta;
+      lm_pos[1] += (lm_vel[1] + 0.5 * f_vec[1]) * time_delta;
+      lm_pos[2] += (lm_vel[2] + 0.5 * f_vec[2]) * time_delta;
+
+      lm_vel[0] += f_vec[0];
+      lm_vel[1] += f_vec[1];
+      lm_vel[2] += f_vec[2];      
+
+      g_len = Math.sqrt(lm_pos[0] * lm_pos[0] + lm_pos[1] * lm_pos[1] + lm_pos[2] * lm_pos[2]);
+      that.altitude = g_len - moon_radius;
+      that.speed = Math.sqrt(lm_vel[0] * lm_vel[0] + lm_vel[1] * lm_vel[1] + lm_vel[2] * lm_vel[2]);
+
+      // surface probes shut off DPS engine
+      if (that.altitude <= 1) {
+        that.DPS_burn = 0;
+      }
+
+      if (that.altitude <= 0) {
+        if (that.speed < 3.0) {
+          that.status = LANDED;
+        } else {
+          that.status = CRASHED;
+        }
+        clearInterval(that.interval);
+      }
+      that.show_status();
+    }, Math.floor(1000 * time_delta));
+  }
+
+  LM01.prototype.weight = function () {
+    return this.DPS_fuel + this.DS_weight + this.APS_fuel + this.AS_weight + this.RCS_fuel;
   }
 
   LM01.prototype.reset = function () {
@@ -91,8 +130,11 @@
     this.DS_weight = 2134.0; // kg
     this.AS_weight = 2347.0; // kg
 
-    this.altitude = 110000.0; // m
-    this.vertical_speed = 0.0; // m/s
+    this.lm_pos = [0, moon_radius+8000, 0];
+    this.lm_vel = [0,0,0];
+    this.lm_nor = [0,1,0];
+    this.altitude = 8000.0; // m
+    this.speed = 0.0; // m/s
     this.start_time = new Date().getTime();
 
     this.roll = 0;
@@ -108,7 +150,7 @@
       clearInterval(this.interval);
     }
     this.interval = null;
-    this.status = 'docked';
+    this.status = DOCKED;
     this.show_status();
   }
 
@@ -121,7 +163,7 @@
     var that = this;
     switch (UREG[A]) {
       case 0x00: // dock status
-        UREG[C] = (this.status === 'docked') ? 0x0001 : 0x0000;
+        UREG[C] = (this.status === DOCKED) ? 0x0001 : 0x0000;
         break;
       case 0x01: // DPS fuel status
         UREG[C] = Math.floor(this.DPS_fuel);
@@ -148,7 +190,7 @@
         UREG[C] = Math.floor(this.pitch); // unit TBD
         break;
       case 0x10: // detach
-        if (this.status === 'docked') {
+        if (this.status === DOCKED) {
           this.start();
         }
         break;
@@ -174,3 +216,46 @@
   };
 
 }());
+
+/*
+
+Name: Lunar Module
+ID: 0x4c4d3031
+Version: 1
+
+DPS - Decent Procedure Stage Engine
+      * Can be throttled between 10% and 60% of full.
+      * Has a max fuel burn rate of ~15kg per second.
+RCS - Reaction Control System
+      * Can perform pitch and roll maneuvers. (no yaw during training)
+      * Engines are off or on full
+      * Fuel burn rate of ~15g per second
+ACS - Ascent Procedure State Engine
+      * Current disabled for training exercises
+
+Interrupts do different things depending on contents of the A register:
+
+ A | BEHAVIOR
+---+----------------------------------------------------------------------------
+ 0 | Set the C register to the status of the LM, 0x0001 for docked, 0x0000 for
+   |   undocked.
+ 1 | Set the C register to the current amount of DPS fuel remaining in kg.
+ 2 | Set the C register to the current DPS burn rate.
+   |   Will be 0, 10-60, or 100 (percent).
+ 3 | Set the C register to the current amount of RCS fuel remaining in kg.
+ 4 | Set the C register to the current RCS pitch burn rate.
+   |   Will be 0 or 1 (full).
+ 5 | Set the C register to the current RCS roll burn rate.
+   |   Will be 0 or 1 (full).
+ 8 | Set the C register to the current altitude in meters.
+ 9 | Set the C register to the current angle of pitch in degrees.
+ a | Set the C register to the current angle of roll in degrees.
+---+----------------------------------------------------------------------------
+10 | Detach from the CM and start the decent procedure.
+11 | Read the value of the B register and set the DPS burn rate.  The value will
+   |   be interpreted as a percentage of full.  The value must be 0, 10-60 or 100.
+12 | Read the value of the B register and set the RCS pitch engine on or off.
+13 | Read the value of the B register and set the RCS roll engine on or off.
+---+----------------------------------------------------------------------------
+
+*/

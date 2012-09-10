@@ -31,6 +31,7 @@
       case 0x0:
         if (UREG[B] === 0) {
           this.frequency = null;
+          this.ticks = 0;
         } else {
           this.frequency = 1000 / (60 / UREG[B]);
           this.ticks = 0;
