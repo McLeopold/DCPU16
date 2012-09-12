@@ -1,0 +1,22 @@
+#main_table {
+  border: solid 2px Grey;
+  border-collapse: collapse;
+}
+#main_table th {
+  background-color: LightGrey;
+}
+#main_table td {
+  border: solid 2px Grey;
+}
+#hardware th {
+  border-top: solid 2px Black;
+  background-color: transparent;
+  text-align: left;
+  font-family: monospace;
+}
+#hardware th a {
+  float: right;
+}
+#hardware td {
+  border: none;
+}

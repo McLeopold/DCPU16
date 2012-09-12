@@ -51,6 +51,9 @@
     });
   };
 
+  Keyboard.description = 'keyboard';
+  Keyboard.specification = 'keyboard.txt';
+
   Keyboard.prototype.reset = function () {
     this.buffer = [];
     this.pressed = {};

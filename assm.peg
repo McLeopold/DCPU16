@@ -208,15 +208,15 @@ bvalue
     }
 
 pop
-  = [Pp][Oo][Pp]
+  = [Pp][Oo][Pp] &(!(LabelChar))
     { return {type: 'pop', code: 0x18}; }
 
 push
-  = [Pp][Uu][Ss][Hh]
+  = [Pp][Uu][Ss][Hh] &(!(LabelChar))
     { return {type: 'push', code: 0x18}; }
 
 peek
-  = [Pp][Ee][Ee][Kk]
+  = [Pp][Ee][Ee][Kk] &(!(LabelChar))
     { return {type: 'peek', code: 0x19}; }
 
 pick

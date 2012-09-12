@@ -2,17 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="dcpu16.css" />
     <title>DCPU16</title>
   </head>
   <body>
-    <table border="1">
+    <table id="main_table">
       <tr>
-        <td rowspan="7" style="vertical-align: top;">
-          <input id="parse" type="button" value="PARSE" />
-          <input id="run" type="button" value="RUN" />
-          <input id="step" type="button" value="STEP" />
+        <th>Program</th>
+        <th>DCPU</th>
+        <th>Hardware</th>
+      </tr>
+      <tr>
+        <td style="vertical-align: top;">
+          <input id="parse" type="button" value="Parse/Reset" />
+          <input id="run" type="button" value="Run" />
+          <input id="step" type="button" value="Step" />
           <br />
-          <textarea id="prog" cols="48" rows="32">; detect Lunar Module v1
+          <textarea id="prog" cols="48" rows="32">
+; Example program demonstrating a possible
+; technique for landing. The LM will fall
+; for 68.5 seconds (4110/60) then turn on
+; the DPS to full, once the LM falls under
+; 15 meters, the engine is cut to half for
+; a gentle decent.
+; The LM crashes at ~10 m/s so this will
+; need to be adjusted (so close...)
+;
+; maybe detect the keyboard and allow for
+; manual control?
+
+; detect Lunar Module v1, clock and display
         HWN I
 :hw_loop
         SUB I, 1
@@ -23,8 +42,8 @@
         IFE B, 0x7349
           IFE A, 0xf615
             SET [display], I
-        IFE B, 0xb402
-          IFE A, 0x12d0
+        IFE B, 0x12d0
+          IFE A, 0xb402
             SET [clock], I
         IFN I, 0
           SET PC, hw_loop
@@ -97,36 +116,20 @@
         SET PC, wait_for_landing
 
 :lunar
-        DAT 0
+        DAT 0xffff
 :display
-        DAT 0
+        DAT 0xffff
 :clock
-        DAT 0
+        DAT 0xffff
 </textarea>
         </td>
-      </tr>
-      <tr>
-        <th colspan="8">LEM1802</th>
-      </tr>
-      <tr>
-        <td colspan="8">
-          <canvas id="console" width="128" height="96"></canvas><br />
-          <!--<canvas id="fontCanvas" width="420" height="324"></canvas>-->
+        <td style="vertical-align: top;"><pre id="RAM"></pre></td>
+        <td style="vertical-align: top;">
+          <table id="hardware">
+            <caption>
+            </caption>
+          </table>
         </td>
-      </tr>
-      <tr>
-        <th colspan="8">LM01</th>
-      </tr>
-      <tr>
-        <td colspan="8" style="vertical-align: top;">
-          <pre id="LM_status"></pre>
-        </td>
-      </tr>
-      <tr>
-        <th colspan="8">DCPU</th>
-      </tr>
-      <tr>
-        <td colspan="8" style="vertical-align: top;"><pre id="RAM"></pre></td>
       </tr>
     </table>
     <script src="jquery-1.7.2.min.js"></script>

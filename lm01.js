@@ -16,29 +16,45 @@
   ;
 
   // no var so that LM01 is global
-  LM01 = function (pre_status) {
+  LM01 = function () {
     this.id = 0x4c4d3031;
     this.version = 0x1;
     this.manufacturer = 0x4e414e41;
-    this.pre_status = pre_status;
     this.status = DOCKED;
     this.reset();
   };
 
-  LM01.prototype.show_status = function () {
-    var msg = '        status: ' + STATUS[this.status] + '\n';
-    msg += '  milliseconds:' + (this.start_time ? (new Date().getTime() - this.start_time) : 0) + '\n\n';
-    msg += '      altitude: ' + this.altitude.toFixed(2) + ' m\n';
-    msg += '         speed: ' + this.speed.toFixed(2) + ' m/s\n';
-    msg += '         pitch: ' + this.pitch + '?\n';
-    msg += '          roll: ' + this.roll + '?\n\n';
-    msg += '      DPS fuel: ' + this.DPS_fuel.toFixed(0) + 'kg\n';
-    msg += '      DPS burn: ' + this.DPS_burn + '%\n\n';
-    msg += '      RCS fuel: ' + this.RCS_fuel.toFixed(0) + 'kg\n';
-    msg += 'RCS pitch burn: ' + this.RCS_pitch_burn + '\n';
-    msg += ' PCS roll burn: ' + this.RCS_roll_burn + '\n';
+  LM01.description = 'LM01';
+  LM01.specification = 'lm01.txt';
 
-    this.pre_status.text(msg);
+  LM01.prototype.create_ui = function () {
+    this.ui = $('<pre></pre>');
+
+    // refresh ui once after DOM is updated
+    var that = this;
+    setTimeout(function () {
+      that.show_status();
+    },0);
+
+    return this.ui;
+  }
+
+  LM01.prototype.show_status = function () {
+    if (this.ui) {
+      var msg = '        status: ' + STATUS[this.status] + '\n';
+      msg += '  milliseconds:' + (this.start_time ? (new Date().getTime() - this.start_time) : 0) + '\n\n';
+      msg += '      altitude: ' + this.altitude.toFixed(2) + ' m\n';
+      msg += '         speed: ' + this.speed.toFixed(2) + ' m/s\n';
+      msg += '         pitch: ' + this.pitch + '?\n';
+      msg += '          roll: ' + this.roll + '?\n\n';
+      msg += '      DPS fuel: ' + this.DPS_fuel.toFixed(0) + 'kg\n';
+      msg += '      DPS burn: ' + this.DPS_burn + '%\n\n';
+      msg += '      RCS fuel: ' + this.RCS_fuel.toFixed(0) + 'kg\n';
+      msg += 'RCS pitch burn: ' + this.RCS_pitch_burn + '\n';
+      msg += ' PCS roll burn: ' + this.RCS_roll_burn + '\n';
+
+      this.ui.text(msg);
+    }
   }
 
   var time_delta = 0.1;
@@ -159,7 +175,7 @@
   }
 
   LM01.prototype.intrpt = function (URAM, SRAM, UREG, SREG) {
-    if (this.status == 'crashed') return;
+    if (this.status == CRASHED) return;
     var that = this;
     switch (UREG[A]) {
       case 0x00: // dock status

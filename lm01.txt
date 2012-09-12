@@ -1,0 +1,39 @@
+Name: Lunar Module
+ID: 0x4c4d3031
+Version: 1
+Manufacturer: 0x4e414e41
+
+DPS - Decent Procedure Stage Engine
+      * Can be throttled between 10% and 60% of full.
+      * Has a max fuel burn rate of ~15kg per second.
+RCS - Reaction Control System
+      * Can perform pitch and roll maneuvers. (no yaw during training)
+      * Engines are off or on full
+      * Fuel burn rate of ~15g per second
+ACS - Ascent Procedure State Engine
+      * Current disabled for training exercises
+
+Interrupts do different things depending on contents of the A register:
+
+ A | BEHAVIOR
+---+----------------------------------------------------------------------------
+ 0 | Set the C register to the status of the LM, 0x0001 for docked, 0x0000 for
+   |   undocked.
+ 1 | Set the C register to the current amount of DPS fuel remaining in kg.
+ 2 | Set the C register to the current DPS burn rate.
+   |   Will be 0, 10-60, or 100 (percent).
+ 3 | Set the C register to the current amount of RCS fuel remaining in kg.
+ 4 | Set the C register to the current RCS pitch burn rate.
+   |   Will be 0 or 1 (full).
+ 5 | Set the C register to the current RCS roll burn rate.
+   |   Will be 0 or 1 (full).
+ 8 | Set the C register to the current altitude in meters.
+ 9 | Set the C register to the current angle of pitch in degrees.
+ a | Set the C register to the current angle of roll in degrees.
+---+----------------------------------------------------------------------------
+10 | Detach from the CM and start the decent procedure.
+11 | Read the value of the B register and set the DPS burn rate.  The value will
+   |   be interpreted as a percentage of full.  The value must be 0, 10-60 or 100.
+12 | Read the value of the B register and set the RCS pitch engine on or off.
+13 | Read the value of the B register and set the RCS roll engine on or off.
+---+----------------------------------------------------------------------------

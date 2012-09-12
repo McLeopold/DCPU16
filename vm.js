@@ -31,7 +31,7 @@
       that.showRAM();
     });
     btnStep = $('#step').click(function () {
-      that.cyle += that.step();
+      that.cycle += that.step(1);
       that.showRAM();
     });
     btnParse = $('#parse').click(function () {
@@ -46,6 +46,7 @@
     hw.connect(function (msg) {
       that.intrpt(msg);
     });
+    return this.HW.length - 1;
   }
 
   DCPU16.prototype.detach_hw = function (hw) {
@@ -396,16 +397,22 @@
                 cycle += 2;
                 break;
               case 0x11: // HWQ
-                UREG[A] = HW[URAM[a_addr]].id & 0xffff;
-                UREG[B] = HW[URAM[a_addr]].id >> 16;
-                UREG[C] = HW[URAM[a_addr]].version;
-                UREG[X] = HW[URAM[a_addr]].manufacturer & 0xffff;
-                UREG[Y] = HW[URAM[a_addr]].manufacturer >> 16;
+                var hw = HW[URAM[a_addr]];
+                if (hw) {
+                  UREG[A] = HW[URAM[a_addr]].id & 0xffff;
+                  UREG[B] = HW[URAM[a_addr]].id >> 16;
+                  UREG[C] = HW[URAM[a_addr]].version;
+                  UREG[X] = HW[URAM[a_addr]].manufacturer & 0xffff;
+                  UREG[Y] = HW[URAM[a_addr]].manufacturer >> 16;
+                }
                 cycle += 4;
                 break;
               case 0x12: // HWI
                 try {
-                  var hw_cycle = HW[URAM[a_addr]].intrpt(URAM, SRAM, UREG, SREG);
+                  var hw = HW[URAM[a_addr]];
+                  if (hw) {
+                    var hw_cycle = hw.intrpt(URAM, SRAM, UREG, SREG);
+                  }
                 } catch (e) {
                   console.log(e);
                   throw e;
@@ -494,12 +501,47 @@
 }());
 
 $(function () {
-  var display = new LEM1802($('#console')[0], 2, 3, 60);
-  var clock = new Clock();
-  var keyboard = new Keyboard(document);
-  var cpu = new DCPU16();
-  cpu.attach_hw(clock);
-  cpu.attach_hw(display);
-  cpu.attach_hw(keyboard);
-  cpu.attach_hw(new LM01($('#LM_status'), $('#LM_start'), $('#LM_reset')));
+  var cpu = new DCPU16(100);
+
+  var el_hardware_btns = $('#hardware caption');
+  var el_hardware = $('#hardware');
+  var devices = [];
+  var register_device = function (device_type) {
+    devices.push(device_type);
+    var button = $('<input type="button" value="Add ' + device_type.description + '" />')
+      .click(function () {
+        attach_device(device_type);
+      });
+    el_hardware_btns.append(button);
+  }
+  var attach_device = function (device_type) {
+    var device = new device_type();
+    var device_id = cpu.attach_hw(device);
+    var ui = $('<tr><th>' +
+               '<input id="detach_' + device_id + '" type="button" value="detach" />' +
+               ' (' + device_id + ') ' + device_type.description +
+               '  <a href="' + device_type.specification + '" target="spec">spec</a>' +
+               '</th></tr>' +
+               '<tr><td id="device_' + device_id + '"></td></tr>');
+    if (device.create_ui) {
+      ui.find('#device_' + device_id).append(device.create_ui());
+    }
+    ui.find('#detach_' + device_id).click(function () {
+      ui.remove();
+      cpu.detach_hw(device);
+    });
+    el_hardware.append(ui);
+  }
+
+  register_device(Clock);
+  register_device(LEM1802);
+  register_device(Keyboard);
+  register_device(LM01);
+
+  attach_device(Clock);
+  attach_device(LEM1802);
+  attach_device(Keyboard);
+  attach_device(LM01);
+
+  cpu.showRAM();
 })

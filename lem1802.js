@@ -86,25 +86,66 @@
                       0x001b, 0x0000, 0x111b, 0x0400, 0x0201, 0x0201, 0x0205, 0x0200];
 
   // no var so that LEM1802 is global
-  LEM1802 = function (el, scale, width, Hz) {
+  LEM1802 = function () {
     this.id = 0x7349f615;
     this.version = 0x1802;
     this.manufacturer = 0x1c6c8b36;
     this.palette32 = Array(16);
-    this.el = el;
+  };
+
+  LEM1802.description = 'LEM1802';
+  LEM1802.specification = 'lem1802.txt';
+
+  LEM1802.prototype.create_ui = function () {
+    this.ui = $('<div><input type="button" value="+" /><input type="button" value="-" />' +
+                '<input type="button" value="<|>" /><input type="button" value=">|<" />' +
+                '<input type="number" value="60" min="1" max="240" />' +
+                '<br><canvas width="128" height="96"></canvas></div>');
+    this.el = this.ui.find('canvas')[0];
+
     this.el.width = 128;
     this.el.height = 96;
-    this.width = width === undefined ? 16 : width;
-    this.scale = scale || 3;
-    this.canvas = el.getContext('2d');
+    this.width = 3;
+    this.scale = 2;
+    this.Hz = 60;
+    this.refresh_id = 0;
+    this.canvas = this.el.getContext('2d');
     this.el.style.borderStyle = 'solid';
-    this.set_scale(this.scale);
     this.reset();
     this.blink_rate = 1000;
     this.blink = true;
     this.blink_timer = null;
-    this.start_refresh(Hz || 60);
-  };
+    this.start_refresh();
+
+    var that = this;
+    var btns = this.ui.find('input');
+    $(btns[0]).click(function () {
+      that.scale++;
+      that.set_scale();
+    });
+    $(btns[1]).click(function () {
+      if (that.scale > 1) {
+        that.scale--;
+        that.set_scale();
+      }
+    });
+    $(btns[2]).click(function () {
+      that.width++;
+      that.set_scale();
+    });
+    $(btns[3]).click(function () {
+      if (that.width > 0) {
+        that.width--;
+        that.set_scale();
+      }
+    });
+    $(btns[4]).change(function () {
+      that.Hz = parseInt($(btns[4]).val());
+      that.refresh_rate = Math.floor(1000 / that.Hz);
+    });
+    this.set_scale();
+    return this.ui;
+  }
 
   LEM1802.prototype.reset = function () {
     this.border = 0;
@@ -117,12 +158,14 @@
     this.screen = null;
   }
 
-  LEM1802.prototype.start_refresh = function (Hz) {
+  LEM1802.prototype.start_refresh = function () {
     var that = this;
-    that.refresh_rate = Math.floor(1000 / Hz);
+    that.refresh_id++;
+    var id = that.refresh_id;
+    that.refresh_rate = Math.floor(1000 / this.Hz);
     that.refresh_fn = function () {
       that.refresh();
-      if (that.refresh_rate) {
+      if (id === that.refresh_id && that.refresh_rate) {
         setTimeout(that.refresh_fn, that.refresh_rate);
       }
     }
@@ -147,11 +190,11 @@
            (this.palette[c] & 0xf).toString(16);           
   }
 
-  LEM1802.prototype.set_scale = function (factor) {
-    this.el.style.height = Math.floor(this.el.height * factor) + 'px';
-    this.el.style.width = Math.floor(this.el.width * factor) + 'px';
-    this.el.style.borderWidth = Math.floor(this.width * factor) + 'px';
-    this.el.style.borderRadius = Math.floor(this.width * factor) + 'px';
+  LEM1802.prototype.set_scale = function () {
+    this.el.style.height = Math.floor(this.el.height * this.scale) + 'px';
+    this.el.style.width = Math.floor(this.el.width * this.scale) + 'px';
+    this.el.style.borderWidth = Math.floor(this.width * this.scale) + 'px';
+    this.el.style.borderRadius = Math.floor(this.width * this.scale) + 'px';
   }
 
   LEM1802.prototype.set_palette32 = function () {

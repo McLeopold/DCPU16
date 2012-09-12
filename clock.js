@@ -13,7 +13,22 @@
     this.reset();
   };
 
+  Clock.description = "clock";
+  Clock.specification = 'clock.txt';
+
+  Clock.prototype.create_ui = function () {
+    // refresh ui once after DOM is updated
+    var that = this;
+    setTimeout(function () {
+      that.show_status();
+    },0);
+
+    return (this.ui = $('<pre></pre>'));
+  }
+
   Clock.prototype.reset = function () {
+    this.ticks = 0;
+    this.frequency = null;
     this.intrpt_msg = 0;
     if (this.interval) {
       clearInterval(this.interval);
@@ -23,6 +38,14 @@
 
   Clock.prototype.connect = function (fn) {
     this.intrpt_fn = fn;
+  }
+
+  Clock.prototype.show_status = function () {
+    if (this.ui) {
+      this.ui.text('Frequency: ' + this.frequency + '\n' +
+                   '    Ticks: ' + this.ticks + '\n' +
+                   'Interrupt: ' + this.intrpt_msg);
+    }
   }
 
   Clock.prototype.intrpt = function (URAM, SRAM, UREG, SREG) {
@@ -40,8 +63,10 @@
             if (that.intrpt_msg !== 0) {
               that.intrpt_fn(that.intrpt_msg);
             }
+            that.show_status();
           }, this.frequency);
         }
+        this.show_status();
         break;
       case 0x1:
         UREG[C] = this.ticks;
@@ -53,6 +78,7 @@
           clearInterval(this.interval);
           this.interval = null;
         }
+        this.show_status();
         break;
     }
   };
