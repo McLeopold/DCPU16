@@ -3,46 +3,97 @@
     , X = 3, Y = 4, Z = 5
     , I = 6, J = 7
     , SP = 8, PC = 9, EX = 10, IA = 11
+    // list of browser keycodes to translate to 0x10c keycodes
+    , KEY_MAP = {
+         8: 0x10,  // backspace
+         9: 0x09,  // tab
+        13: 0x11,  // return
+        16: 0x90,  // shift
+        17: 0x91,  // control
+        18: null,  // alt
+        19: null,  // pause
+        20: null,  // caps lock
+        27: 27,    // esc
+        33: null,  // page up
+        34: null,  // page down
+        35: null,  // end
+        36: null,  // home
+        37: 0x82,  // left
+        38: 0x80,  // up
+        39: 0x83,  // right
+        40: 0x81,  // down
+        45: 0x12,  // insert
+        46: 0x13,  // delete
+        91: null,  // windows left
+        92: null,  // windows right
+        93: null,  // right click
+        96: 48,    // num 0
+        97: 49,    // num 1
+        98: 50,    // num 2
+        99: 51,    // num 3
+        100: 52,   // num 4
+        101: 53,   // num 5
+        102: 54,   // num 6
+        103: 55,   // num 7
+        104: 56,   // num 8
+        105: 57,   // num 9
+        106: 42,   // num *
+        107: 43,   // num +
+        109: 45,   // num -
+        110: 46,   // num .
+        111: 47,   // num /
+        112: null, // F1
+        113: null, // F2
+        114: null, // F3
+        115: null, // F4
+        116: null, // F5
+        117: null, // F6
+        118: null, // F7
+        119: null, // F8
+        120: null, // F9
+        121: null, // F10
+        122: null, // F11
+        123: null, // F12
+        144: null, // num lock
+        145: null, // scroll lock
+        186: 59, //58],  // ; :
+        187: 61, //43],  // = +
+        188: 44, //60],  // , <
+        189: 45, //95],  // - _
+        190: 46, //62],  // . >
+        191: 47, //63],  // / ?
+        192: 96, //126], // ` ~
+        219: 91, //123], // [ {
+        220: 92, //124], // \ |
+        221: 93, //125], // ] }
+        222: 39, //34],  // ' "
+        255: null // windows right click
+      }
+    // list of 0x10c keycodes to use unicode symbol for status
+    , KEY_CHAR = {
+        0x10: '\u232b',
+        0x11: '\u21a9',
+        0x12: '\u2759',
+        0x13: '\u2326',
+        0x1b: '\u238b',
+        0x80: '\u2191',
+        0x81: '\u2193',
+        0x82: '\u2190',
+        0x83: '\u2192',
+        0x90: '\u21e7',
+        0x91: '\u2318',
+        0x20: '\u2423',
+        0x09: '\u21e5'
+      }
+    // list of 0x10c keycodes to place in buffer during keydown event
+    , KEY_TO_BUFFER = [
+        0x09, 0x10, 0x12, 0x13, 0x80, 0x81, 0x82, 0x83
+      ]
+    // list of browser keycodes to prevent default behavior of
+    , KEY_PREVENT = [
+        8, 9, 37, 38, 39, 40
+      ]
   ;
-    var key_num = {
-       8: 0x10, // backspace
-      13: 0x11, // return
-      45: 0x12, // insert
-      46: 0x13, // delete
-      38: 0x80, // up
-      40: 0x81, // down
-      37: 0x82, // left
-      39: 0x83, // right
-      16: 0x90, // shift
-      17: 0x91  // control
-    };
-    var key_char = {
-      0x10: '\u232b',
-      0x11: '\u21a9',
-      0x12: '\u2759',
-      0x13: '\u2326',
-      0x80: '\u2191',
-      0x81: '\u2193',
-      0x82: '\u2190',
-      0x83: '\u2192',
-      0x90: '\u21e7',
-      0x91: '\u2318',
-      0x20: '\u2423',
-      0x09: '\u21e5'
-    }
-    var pressed_map = {
-      192: 96,  // ` ~
-      189: 45,  // - _
-      187: 61,  // = +
-      219: 91,  // [ {
-      221: 93,  // ] }
-      220: 92,  // \ |
-      186: 59,  // ; :
-      222: 39,  // ' "
-      188: 44,  // , <
-      190: 46,  // . >
-      191: 47   // / ?       
-    }
 
   // no var so that Keyboard is global
   Keyboard = function () {
@@ -50,37 +101,6 @@
     this.version = 0x1;
     this.manufacturer = 0x0; // TODO: figure out manufacturer
     this.reset();
-    this.el = document;
-    var that = this;
-    // used to translate between browser keyCode and 0x10c keyboard numbers
-    $(document).keydown(function (evt) {
-      if (evt.target.nodeName !== 'TEXTAREA') {
-        console.log('keydown: ' + evt.which);
-        if (evt.which >= 37 && evt.which <= 40 || evt.which === 8) evt.preventDefault();
-        var key = pressed_map[evt.which] || evt.which;
-        that.pressed[key] = true;
-        if (key >= 0x10 && key <= 0x13 || key === 9) that.buffer.push(key);
-        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
-        that.show_status();
-      }
-    });
-    $(document).keyup(function (evt) {
-      if (evt.target.nodeName !== 'TEXTAREA') {
-        evt.preventDefault();
-        that.pressed[pressed_map[evt.which] || evt.which] = false;
-        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
-        that.show_status();
-      }
-    });
-    $(document).keypress(function (evt) {
-      if (evt.target.nodeName !== 'TEXTAREA' && evt.keyCode !== 13) {
-        console.log('keypress: ' + evt.which);
-        evt.preventDefault();
-        that.buffer.push(evt.which);
-        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
-        that.show_status();
-      }
-    });
   };
 
   Keyboard.description = 'keyboard';
@@ -92,6 +112,37 @@
     setTimeout(function () {
       that.show_status();
     },0);
+
+    $(document).keydown(function (evt) {
+      // keydown event receives keyboard keycode, translate to ascii
+      if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
+        if (KEY_PREVENT.indexOf(evt.which) !== -1) evt.preventDefault();
+        var key = KEY_MAP[evt.which] || evt.which;
+        that.pressed[key] = true;
+        if (KEY_TO_BUFFER.indexOf(key) !== -1) that.buffer.push(key);
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+        that.show_status();
+      }
+    });
+    $(document).keyup(function (evt) {
+      if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
+        if (KEY_PREVENT.indexOf(evt.which) !== -1) evt.preventDefault();
+        var key = KEY_MAP[evt.which] || evt.which;
+        that.pressed[key] = false;
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+        that.show_status();
+      }
+    });
+    $(document).keypress(function (evt) {
+      // keypress event receives the ascii keycode and places it in the buffer
+      if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
+        evt.preventDefault();
+        var key = (evt.which <= 0x20 && evt.which >= 0x80) ? KEY_MAP[evt.which] || evt.which : evt.which;
+        that.buffer.push(key);
+        if (that.intrpt_msg !== 0) that.intrpt_fn(that.intrpt_msg);
+        that.show_status();
+      }
+    });
 
     return (this.ui = $('<pre></pre>'));    
   }
@@ -106,10 +157,10 @@
       }}
       this.ui.text(
         '   Buffer: ' + this.buffer.map(function (c) {
-          return (key_char[c] || String.fromCharCode(c));
+          return (KEY_CHAR[c] || String.fromCharCode(c));
         }).join('') + '\n' +
         '  Pressed: ' + pressed.map(function (c) {
-          return (key_char[c] || String.fromCharCode(c)) + ' ';
+          return (KEY_CHAR[c] || String.fromCharCode(c)) + ' ';
         }).join(' ') + '\n' +
         'Interrupt: ' + this.intrpt_msg
       );
@@ -120,6 +171,7 @@
     this.buffer = [];
     this.pressed = {};
     this.intrpt_msg = 0;
+    this.show_status();
   }
 
   Keyboard.prototype.connect = function (fn) {
