@@ -508,7 +508,7 @@ $(function () {
   var devices = [];
   var register_device = function (device_type) {
     devices.push(device_type);
-    var button = $('<input type="button" value="Add ' + device_type.description + '" />')
+    var button = $('<input type="button" value="' + device_type.description + '" />')
       .click(function () {
         attach_device(device_type);
       });

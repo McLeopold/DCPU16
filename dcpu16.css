@@ -1,3 +1,6 @@
+body {
+  font-family: sans-serif;
+}
 #main_table {
   border: solid 2px Grey;
   border-collapse: collapse;
@@ -19,4 +22,28 @@
 }
 #hardware td {
   border: none;
+}
+#hardware pre {
+  margin: 0px;
+}
+#RAM {
+  font-size: 0.8em;
+}
+#prog {
+  font-size: 0.8em;
+}
+.keyboard {
+  background-image: url('keyboard.png');
+  background-repeat: no-repeat;
+  background-position: right top;
+  position: relative;
+}
+.help {
+  color: LightGrey;
+  font-size: 0.75em;
+  font-family: sans-serif;
+  text-align: left;
+  right: 0px;
+  bottom: 0px;
+  position: absolute;
 }

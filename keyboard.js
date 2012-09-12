@@ -113,7 +113,10 @@
       that.show_status();
     },0);
 
-    $(document).keydown(function (evt) {
+    this.ui = $('<div tabindex="0" class="keyboard"><pre></pre>' +
+                '<span class="help">set focus here to type</span></div>');
+
+    this.ui.keydown(function (evt) {
       // keydown event receives keyboard keycode, translate to ascii
       if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
         if (KEY_PREVENT.indexOf(evt.which) !== -1) evt.preventDefault();
@@ -124,7 +127,7 @@
         that.show_status();
       }
     });
-    $(document).keyup(function (evt) {
+    this.ui.keyup(function (evt) {
       if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
         if (KEY_PREVENT.indexOf(evt.which) !== -1) evt.preventDefault();
         var key = KEY_MAP[evt.which] || evt.which;
@@ -133,7 +136,7 @@
         that.show_status();
       }
     });
-    $(document).keypress(function (evt) {
+    this.ui.keypress(function (evt) {
       // keypress event receives the ascii keycode and places it in the buffer
       if (evt.target.nodeName !== 'TEXTAREA' && evt.target.nodeName !== 'INPUT') {
         evt.preventDefault();
@@ -144,7 +147,7 @@
       }
     });
 
-    return (this.ui = $('<pre></pre>'));    
+    return this.ui;    
   }
 
   Keyboard.prototype.show_status = function () {
@@ -155,7 +158,7 @@
           pressed.push(prop);
         }
       }}
-      this.ui.text(
+      this.ui.find('pre').text(
         '   Buffer: ' + this.buffer.map(function (c) {
           return (KEY_CHAR[c] || String.fromCharCode(c));
         }).join('') + '\n' +
