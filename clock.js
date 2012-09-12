@@ -42,9 +42,11 @@
 
   Clock.prototype.show_status = function () {
     if (this.ui) {
-      this.ui.text('Frequency: ' + this.frequency + '\n' +
-                   '    Ticks: ' + this.ticks + '\n' +
-                   'Interrupt: ' + this.intrpt_msg);
+      this.ui.text(
+        'Frequency: ' + this.frequency + '\n' +
+        '    Ticks: ' + this.ticks + '\n' +
+        'Interrupt: ' + this.intrpt_msg
+      );
     }
   }
 
