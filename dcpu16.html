@@ -17,6 +17,7 @@
           <input id="parse" type="button" value="Parse/Reset" />
           <input id="run" type="button" value="Run" />
           <input id="step" type="button" value="Step" />
+          <input id="stop" type="button" value="Stop" />
           <br />
           <textarea id="prog" cols="48" rows="32">
 ; Example program demonstrating a possible
@@ -122,6 +123,7 @@
 :clock
         DAT 0xffff
 </textarea>
+<div id="samples" />
         </td>
         <td style="vertical-align: top;"><pre id="RAM"></pre></td>
         <td style="vertical-align: top;">
@@ -137,6 +139,201 @@
     <script src="clock.js"></script>
     <script src="keyboard.js"></script>
     <script src="lm01.js"></script>
+    <script src="HMD.js"></script>
     <script src="vm.js"></script>
+    <script>
+
+$(function () {
+  // load sample asm buttons
+  var sample_div = $('#samples');
+  $('.sample').each(function (i, el) {
+    var sample_name = el.title;
+    (function (sample_name) {
+      sample_div.append(
+        $('<input type="button" id="' + sample_name + '" value="' + sample_name +'" />')
+          .click(function () {
+            $('#prog').val($(el).find('pre').text());
+          })
+      );
+    }(sample_name));
+    if (window.location.hash) {
+      $('.sample[title="' + window.location.hash.substring(1) + '"]').each(function (i, el) {
+        $('#prog').val($(el).find('pre').text());
+      });
+    }
+  })
+})
+
+    </script>
+    <div class="sample" title="HMD"><pre>
+:start
+        JSR detect_hw
+        JSR init_lem
+
+        ; change this to read_data to skip the write
+        ; step and prove to yourself that your disk
+        ; actually has data
+        SET PC, write_data
+
+:write_data
+        SET A, 0x11      ; write data to drive
+        SET B, 0x0       ; in sector 0
+        SET C, 0x1       ; for 1 sector
+        SET X, text      ; get data to write from here (512 words)
+        HWI [drive]      ; go!
+
+:read_data
+        SET A, 0x10      ; read data from drive
+        SET B, 0x0       ; from sector 0
+        SET C, 0x1       ; for 1 sector
+        SET X, 0x8000    ; write to display
+        HWI [drive]      ; go!
+
+        ; this sets the foreground color to white
+        ; so you can see the text written
+        SET I, 0
+:display_loop
+        BOR [0x8000+I], 0xf030
+        ADD I, 1
+        IFL I, 384
+            SET PC, display_loop
+
+:end
+        SET PC, end
+
+; detect and initialize hardware
+:detect_hw
+                HWN I
+:hw_loop
+                SUB I, 1
+                HWQ I
+                IFE B, 0x7349
+                IFE A, 0xf615
+                        SET [display], I
+                IFE B, 0x74fa
+                IFE A, 0x4cae
+                        SET [drive], I
+                IFN I, 0
+                SET PC, hw_loop
+        SET PC, POP
+
+:init_lem
+        SET A, 0
+        SET B, 0x8000
+        HWI [display]
+        SET PC, POP
+
+:display
+        DAT 0xffff
+:drive
+        DAT 0xffff
+
+:text   ; change this to write different data to different disks
+        DAT "This is a test of the disk system"
+    </pre></div>
+    <div class="sample" title="Lunar"><pre>
+; Example program demonstrating a possible
+; technique for landing. The LM will fall
+; for 68.5 seconds (4110/60) then turn on
+; the DPS to full, once the LM falls under
+; 15 meters, the engine is cut to half for
+; a gentle decent.
+; The LM crashes at ~10 m/s so this will
+; need to be adjusted (so close...)
+;
+; maybe detect the keyboard and allow for
+; manual control?
+
+; detect Lunar Module v1, clock and display
+        HWN I
+:hw_loop
+        SUB I, 1
+        HWQ I
+        IFE B, 0x4c4d
+          IFE A, 0x3031
+            SET [lunar], I
+        IFE B, 0x7349
+          IFE A, 0xf615
+            SET [display], I
+        IFE B, 0x12d0
+          IFE A, 0xb402
+            SET [clock], I
+        IFN I, 0
+          SET PC, hw_loop
+
+:init_lem
+        SET A, 0
+        SET B, 0x8000
+        HWI [display]
+
+:start_decent
+        SET A, 0x10
+        HWI [lunar]
+
+:set_burn_timer
+        SET A, 0
+        SET B, 4110
+        HWI [clock]
+
+:wait_for_landing
+        SET A, 0x08
+        HWI [lunar]
+
+:display_altitude
+        SET X, C
+        MOD X, 10
+        BOR X, 0xf030
+        SET [0x8003], X
+
+        SET X, C
+        DIV X, 10
+        MOD X, 10
+        BOR X, 0xf030
+        SET [0x8002], X
+
+        SET X, C
+        DIV X, 100
+        MOD X, 10
+        BOR X, 0xf030
+        SET [0x8001], X
+
+        SET X, C
+        DIV X, 1000
+        MOD X, 10
+        BOR X, 0xf030
+        SET [0x8000], X
+
+        IFL C, 15
+            SET PC, set_hover
+
+        SET A, 1
+        HWI [clock]
+        IFN C, 0
+            SET PC, set_burn
+
+        SET PC, wait_for_landing
+
+:set_burn
+        SET A, 0x13
+        SET B, 0x3f
+        HWI [lunar]
+        SET A, 0
+        SET B, 0
+        HWI [clock] ; turn off timer
+        SET PC, wait_for_landing
+
+:set_hover
+        SET A, 0x13
+        SET B, 50
+        HWI [lunar]
+        SET PC, wait_for_landing
+
+:lunar
+        DAT 0xffff
+:display
+        DAT 0xffff
+:clock
+        DAT 0xffff
+    </pre></div>
   </body>
 </html>

@@ -1,6 +1,23 @@
 body {
   font-family: sans-serif;
 }
+td {
+  vertical-align: top;
+}
+input[type="button"] {
+  border: solid 1px #333;
+  border-radius: 2px;
+  color: #333;
+}
+input[type="text"] {
+  border: solid 2px Grey;
+  border-radius: 4px;
+}
+select {
+  width: 100%;
+  border: solid 2px Grey;
+  border-radius: 4px;
+}
 #main_table {
   border: solid 2px Grey;
   border-collapse: collapse;
@@ -16,6 +33,9 @@ body {
   background-color: transparent;
   text-align: left;
   font-family: monospace;
+}
+#hardware th {
+  background-color: LightGrey;
 }
 #hardware th a {
   float: right;
@@ -46,4 +66,18 @@ body {
   right: 0px;
   bottom: 0px;
   position: absolute;
+}
+.message {
+  color: DarkBlue;
+  font-size: 0.75em;
+  font-family: monospace;
+  text-align: left;
+  width: 300px;
+}
+#HMD_shred {
+  border-color: DarkRed;
+  color: Red;
+}
+.sample {
+  display: none;
 }

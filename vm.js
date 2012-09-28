@@ -24,6 +24,9 @@
     // Hookup registers, ram and program text to html form inputs
     this.ram = $('#RAM');
     this.prog = $('#prog');
+    var prog = localStorage.getItem('DCPU16');
+    this.prog.val(prog);
+
 
     // Hookup html buttons to cpu functions
     btnRun = $('#run').click(function () {
@@ -36,7 +39,11 @@
     });
     btnParse = $('#parse').click(function () {
       that.parse();
+      localStorage.setItem('DCPU16', that.prog.val());
     });
+    btnStop = $('#stop').click(function () {
+      that.stop();
+    })
 
   }
 
@@ -109,6 +116,10 @@
     }
     this.cycle = 0;
     this.running = true;
+  }
+
+  DCPU16.prototype.stop = function () {
+    this.running = false;
   }
 
   DCPU16.prototype.intrpt = function (msg) {
@@ -489,7 +500,9 @@
       } else {
         msg += hex(i) + ':';
         for (var j = 0; j < 8; ++j) {
-          msg += ' ' + hex(URAM[i+j]);
+          msg += (UREG[PC] === i + j) ? '\u2192' :
+                 (UREG[SP] === i + j) ? '\u2192' : ' ';
+          msg += hex(URAM[i+j]);
         }
         msg += '\n';
         gap = false;
@@ -536,11 +549,13 @@ $(function () {
   register_device(Clock);
   register_device(LEM1802);
   register_device(Keyboard);
+  register_device(HMD);
   register_device(LM01);
 
   attach_device(Clock);
   attach_device(LEM1802);
   attach_device(Keyboard);
+  attach_device(HMD);
   attach_device(LM01);
 
   cpu.showRAM();
