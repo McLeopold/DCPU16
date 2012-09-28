@@ -193,7 +193,7 @@ $(function () {
         ; so you can see the text written
         SET I, 0
 :display_loop
-        BOR [0x8000+I], 0xf030
+        BOR [0x8000+I], 0xf000
         ADD I, 1
         IFL I, 384
             SET PC, display_loop
