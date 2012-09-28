@@ -182,7 +182,6 @@
   }
 
   Keyboard.prototype.intrpt = function (URAM, SRAM, UREG, SREG) {
-    var that = this;
     switch (UREG[A]) {
       case 0x0:  // clear buffer
         this.buffer = [];
