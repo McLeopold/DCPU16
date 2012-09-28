@@ -1,6 +1,3 @@
-
-
-
 start
   = ws i:lins*
     {
@@ -42,33 +39,34 @@ start
           b_next = true;
         }
 
+        var size = 1;
         ins.code = ins.op.code + (ins.a.code << 10) + (ins.b.code << 5);
         dump.push(ins.code);
 
         if (a_next) {
           dump.push(a_val);
+          size++;
         }
         if (b_next) {
           dump.push(b_val);
+          size++;
         }
 
         if (   ins.a.type === 'numref'
-            || ins.a.type === 'num') {
+            || ins.a.type === 'num'
+            || ins.a.type === 'regoff') {
           dump.push(ins.a.val);
-        }
-        if (   ins.a.type === 'regoff'
-            || ins.a.type === 'regoffr') {
-          dump.push(ins.a.off);
+          size++;
         }
 
         if (   ins.b.type === 'numref'
-            || ins.b.type === 'num') {
+            || ins.b.type === 'num'
+            || ins.b.type === 'regoff') {
           dump.push(ins.b.val);
+          size++;
         }
-        if (   ins.b.type === 'regoff'
-            || ins.b.type === 'regoffr') {
-          dump.push(ins.b.off);
-        }
+
+        ins.size = size;
       }
 
       for (var j = 0; j < dump.length; ++j) {
@@ -178,7 +176,7 @@ hwi = [Hh][Ww][Ii] { return {type: 'hwi', code: 0x12}; }
 
 
 value
-  = reg / regref / regoff / regoffr / peek / pick / numref / num / label / labelref
+  = reg / regref / regoff / peek / pick / numref / num / label / labelref
 
 avalue
   = v:(pop / value)
@@ -233,16 +231,15 @@ labelref
 
 regoff
   = '[' ws n:num ws '+' ws r:reg ws ']'
-    { return {type: 'regoff', val: r.val, code: r.code + 0x10, off: n.val}; }
-
-regoffr
-  = '[' ws r:reg ws '+' ws n:num ws ']'
-    { return {type: 'regoff', val: r.val, code: r.code + 0x10, off: n.val}; }
+    { return {type: 'regoff', reg: r.reg, code: r.code + 0x10, val: n.val}; }
+  / '[' ws r:reg ws '+' ws n:num ws ']'
+    { return {type: 'regoff', reg: r.reg, code: r.code + 0x10, val: n.val}; }
 
 regref
   = '[' ws r:reg ws ']'
-    { return {type: 'regref', val: r.val, code: r.code+0x8}; }
+    { return {type: 'regref', reg: r.reg, code: r.code+0x8}; }
 
+// IA is not defined because it can only be accessed via the IAS and IAG ops
 reg
   = r:([ABCXYZIJabcxyzij]
   / [Pp][Cc] / [Ss][Pp] / [Ee][Xx] )
@@ -264,7 +261,7 @@ reg
         case 'ex': code = 0x1d; break;
       }
       return {type: 'reg',
-              val: reg,
+              reg: reg,
               code: code};
     }
 
@@ -284,6 +281,9 @@ hexnum
   = "0x" d:hex+
     { return parseInt(d.join(''), 16); }
 
+
+// define useful character classes
+
 SourceChar
   = [\u0000-\uffff]
 LineChar
@@ -298,13 +298,14 @@ CommentChar
   = ';'
 Comment
   = CommentChar LineChar*
-
 ws
   = (SpaceChar / EOLChar / Comment)*
   { return ''; }
-
 eol
   = (SpaceChar / Comment)* EOLChar+
+
+
+// string syntax is the same a javascript's
 
 string
     = "'" chars:s_char* "'"
